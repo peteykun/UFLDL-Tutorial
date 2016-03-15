@@ -14,12 +14,12 @@
 %  allow your sparse autoencoder to get good filters; you do not need to 
 %  change the parameters below.
 
-visibleSize = 8*8;   % number of input units 
-hiddenSize = 25;     % number of hidden units 
-sparsityParam = 0.01;   % desired average activation of the hidden units.
-                     % (This was denoted by the Greek alphabet rho, which looks like a lower-case "p",
-		     %  in the lecture notes). 
-lambda = 0.0001;     % weight decay parameter       
+visibleSize = 28*28;   % number of input units 
+hiddenSize = 196;      % number of hidden units 
+sparsityParam = 0.1;   % desired average activation of the hidden units.
+                       % (This was denoted by the Greek alphabet rho, which looks like a lower-case "p",
+		               %  in the lecture notes). 
+lambda = 3e-3;       % weight decay parameter       
 beta = 3;            % weight of sparsity penalty term       
 
 %%======================================================================
@@ -27,8 +27,9 @@ beta = 3;            % weight of sparsity penalty term
 %
 %  After implementing sampleIMAGES, the display_network command should
 %  display a random sample of 200 patches from the dataset
+images = loadMNISTImages('train-images.idx3-ubyte');
 
-patches = sampleIMAGES;
+patches = images(:, 1:10000);
 display_network(patches(:,randi(size(patches,2),200,1)),8);
 
 
@@ -95,6 +96,7 @@ if false
                 % usually less than 1e-9.
 
                 % When you got this working, Congratulations!!! 
+    return
 end
 
 %%======================================================================

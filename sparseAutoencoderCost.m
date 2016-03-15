@@ -18,14 +18,6 @@ W2 = reshape(theta(hiddenSize*visibleSize+1:2*hiddenSize*visibleSize), visibleSi
 b1 = theta(2*hiddenSize*visibleSize+1:2*hiddenSize*visibleSize+hiddenSize);
 b2 = theta(2*hiddenSize*visibleSize+hiddenSize+1:end);
 
-% Cost and gradient variables (your code needs to compute these values). 
-% Here, we initialize them to zeros. 
-cost = 0;
-W1grad = zeros(size(W1)); 
-W2grad = zeros(size(W2));
-b1grad = zeros(size(b1)); 
-b2grad = zeros(size(b2));
-
 %% ---------- YOUR CODE HERE --------------------------------------
 %  Instructions: Compute the cost/optimization objective J_sparse(W,b) for the Sparse Autoencoder,
 %                and the corresponding gradients W1grad, W2grad, b1grad, b2grad.
@@ -43,58 +35,36 @@ b2grad = zeros(size(b2));
 % 
 
 m = size(data, 2);
-average_activation = zeros([hiddenSize, 1]);
 
-for j=1:hiddenSize    
-    for k=1:m
-        a_2 = sigmoid(W1 * data(:,k) + b1);
-        average_activation(j) = average_activation(j) + a_2(j)/m;
-    end
-    
-    cost = cost + beta * KLDiv(sparsityParam, average_activation(j));
-end
+% forward propagation
+z_2 = W1 * data + repmat(b1, 1, m);
+a_2 = sigmoid(z_2);
+z_3 = W2 * a_2 + repmat(b2, 1, m);
+a_3 = sigmoid(z_3);
 
-for i = 1:m
-    z_2 = W1 * data(:,i) + b1;
-    a_2 = sigmoid(z_2);
-    z_3 = W2 * a_2 + b2;
-    a_3 = sigmoid(z_3);
-    
-    output_delta = zeros([visibleSize, 1]);
-    hidden_delta = zeros([hiddenSize, 1]);
+cost = sum(sum((a_3 - data).^2)) / (2 * m);
 
-    for j=1:visibleSize
-        output_delta(j) = - (data(j,i) - a_3(j)) * a_3(j) * (1 - a_3(j));
-    end
-    
-    for j=1:hiddenSize
-        hidden_delta(j) = (dot(W2(:,j), output_delta) + beta * (-sparsityParam/average_activation(j) + (1 - sparsityParam)/(1 - average_activation(j)))) * a_2(j) * (1 - a_2(j));
-    end
+% average activation
+average_activation = sum(a_2, 2)/m;
+cost = cost + beta * sum(KLDiv(sparsityParam * ones (size(average_activation)), average_activation));
 
-    W1grad = W1grad + hidden_delta * transpose(data(:,i));
-    W2grad = W2grad + output_delta * transpose(a_2);
-    b1grad = b1grad + hidden_delta;
-    b2grad = b2grad + output_delta;
-    
-    cost = cost + norm(a_3 - data(:,i))^2 / (2 * m);  
-end
+% backward propagation
+output_delta = -(data - a_3) .* a_3 .* (1 - a_3);
+sparsityIndex = -sparsityParam ./ average_activation + (1-sparsityParam) ./ (1-average_activation);
+hidden_delta = ((W2' * output_delta) + repmat(beta * sparsityIndex, 1, m))  .* a_2 .* (1 - a_2);
+
+W1grad = hidden_delta * transpose(data);
+W2grad = output_delta * transpose(a_2);
+b1grad = sum(hidden_delta, 2);
+b2grad = sum(output_delta, 2);
 
 W2grad = (W2grad/size(data,2)) + (lambda*W2);
 b2grad = b2grad/size(data,2);
 W1grad = (W1grad/size(data,2)) + (lambda*W1);
 b1grad = b1grad/size(data,2);
 
-for i=1:size(W1, 1)
-    for j=1:size(W1, 2)
-        cost = cost + W1(i,j)^2 * lambda / 2;
-    end
-end
-
-for i=1:size(W2, 1)
-    for j=1:size(W2, 2)
-        cost = cost + W2(i,j)^2 * lambda / 2;
-    end
-end
+cost = cost + sum(sum(W1.^2)) * lambda / 2;
+cost = cost + sum(sum(W2.^2)) * lambda / 2;
 
 %-------------------------------------------------------------------
 % After computing the cost and gradient, we will convert the gradients back
